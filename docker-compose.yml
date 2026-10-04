@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: securebank
+      MYSQL_USER: bankapp
+      MYSQL_PASSWORD: bankapp_local
+      MYSQL_ROOT_PASSWORD: root_local_only
+    volumes: ["securebank_mysql:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/securebank?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: bankapp
+      DB_PASSWORD: bankapp_local
+      JWT_SECRET: local-compose-secret-change-before-deployment-123456789
+      FRONTEND_ORIGIN: http://localhost:8081
+    ports: ["8080:8080"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    ports: ["8081:80"]
+    depends_on: [backend]
+volumes:
+  securebank_mysql:
